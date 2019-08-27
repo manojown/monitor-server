@@ -1,14 +1,23 @@
 package OsUtility
 
 import (
-	"serverInfo/client/models"
+	"fmt"
 
 	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/mem"
 )
 
-func GetStatus() SharedModel.UsageStat {
+func GetMem() *mem.VirtualMemoryStat {
+	var virtual *mem.VirtualMemoryStat
 	// var Status SharedModel.UsageStat
+	virtual, _ = mem.VirtualMemory()
+	return virtual
+}
 
-	v, _ := disk.Usage("/")
-	return v
+func GetDisk() {
+	// var virtual []disk.PartitionStat
+	// var Status SharedModel.UsageStat
+	virtual, _ := disk.Usage(, "/")
+	fmt.Printf("Asdasd data is", virtual)
+	return virtual
 }

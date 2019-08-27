@@ -1,11 +1,10 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
-	"os"
-	"strings"
+	"serverInfo/client/services"
 )
 
 type Client struct {
@@ -29,17 +28,19 @@ func (client *Client) receive() {
 
 func startClientMode() {
 	fmt.Println("Starting client...")
-	connection, error := net.Dial("tcp", "localhost:12345")
+	connection, error := net.Dial("tcp", "ec2-52-91-69-245.compute-1.amazonaws.com:12345")
 	if error != nil {
 		fmt.Println(error)
 	}
 	client := &Client{socket: connection}
 	go client.receive()
-	for {
-		reader := bufio.NewReader(os.Stdin)
-		message, _ := reader.ReadString('\n')
-		connection.Write([]byte(strings.TrimRight(message, "\n")))
-	}
+	v := OsUtility.GetMem()
+	OsUtility.GetDisk()
+
+	// fmt.Printf("Asdasdasdasd data is", disk)
+	d, _ := json.Marshal(v)
+	connection.Write([]byte(d))
+
 }
 
 func main() {
