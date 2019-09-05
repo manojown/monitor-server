@@ -1,15 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"monitor-server/client/services"
 	"net"
-	"serverInfo/client/services"
+	"os"
+
+	"github.com/subosito/gotenv"
 )
 
 type Client struct {
 	socket net.Conn
 	data   chan []byte
+}
+
+// type DetailedManager SharedModel.DetailedManager
+
+func init() {
+	gotenv.Load()
 }
 
 func (client *Client) receive() {
@@ -28,19 +36,25 @@ func (client *Client) receive() {
 
 func startClientMode() {
 	fmt.Println("Starting client...")
-	connection, error := net.Dial("tcp", "ec2-52-91-69-245.compute-1.amazonaws.com:12345")
+	MasterData := make(chan []byte)
+	connection, error := net.Dial("tcp", os.Getenv("SERVER_URL"))
 	if error != nil {
 		fmt.Println(error)
 	}
-	client := &Client{socket: connection}
-	go client.receive()
-	v := OsUtility.GetMem()
-	OsUtility.GetDisk()
+	// client := &Client{socket: connection}
 
-	// fmt.Printf("Asdasdasdasd data is", disk)
-	d, _ := json.Marshal(v)
-	connection.Write([]byte(d))
+	go OsUtility.GetMem(MasterData)
+	go OsUtility.GetDisk(MasterData)
+	go OsUtility.GetCpu(MasterData)
+	go OsUtility.GetDocker(MasterData)
 
+	for {
+		select {
+		case state := <-MasterData:
+			connection.Write([]byte(state))
+
+		}
+	}
 }
 
 func main() {

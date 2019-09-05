@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
+
+	"github.com/gorilla/websocket"
 )
 
 type ClientManager struct {
@@ -12,10 +16,15 @@ type ClientManager struct {
 	unregister chan *Client
 }
 
+type msg struct {
+	Num int
+}
 type Client struct {
 	socket net.Conn
 	data   chan []byte
 }
+
+var Broadcast chan []byte = make(chan []byte)
 
 func (manager *ClientManager) start() {
 	for {
@@ -52,8 +61,9 @@ func (manager *ClientManager) receive(client *Client) {
 			break
 		}
 		if length > 0 {
-			fmt.Println("RECEIVED: " + string(message))
-			manager.broadcast <- message
+			fmt.Println("RECEIVED 1: " + string(message))
+			Broadcast <- message
+			// manager.broadcast <- message
 		}
 	}
 }
@@ -67,7 +77,7 @@ func (client *Client) receive() {
 			break
 		}
 		if length > 0 {
-			fmt.Println("RECEIVED: " + string(message))
+			fmt.Println("RECEIVED:2 " + string(message))
 		}
 	}
 }
@@ -111,7 +121,44 @@ func startServerMode() {
 }
 
 func main() {
+	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/", rootHandler)
+	go startServerMode()
+	panic(http.ListenAndServe(":5000", nil))
 
-	startServerMode()
+}
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	content, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		fmt.Println("Could not open file.", err)
+	}
+	fmt.Fprintf(w, "%s", content)
+}
 
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Origin") != "http://"+r.Host {
+		http.Error(w, "Origin not allowed", 403)
+		return
+	}
+	conn, err := websocket.Upgrade(w, r, w.Header(), 1024, 1024)
+	if err != nil {
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+	}
+	go echo(conn)
+}
+
+func echo(conn *websocket.Conn) {
+
+	for {
+		select {
+		case state := <-Broadcast:
+
+			fmt.Println("=====================")
+			fmt.Println("Data recieved", string(state))
+			fmt.Println("=====================")
+
+			conn.WriteJSON(string(state))
+
+		}
+	}
 }
